@@ -57,6 +57,32 @@ test('createPlayer', () => {
   assert.ok(player.id);
 });
 
+test('clampBuyins', async (t) => {
+  await t.test('keeps a valid non-negative integer', () => {
+    assert.equal(PokerApp.clampBuyins(4), 4);
+  });
+
+  await t.test('floors a decimal value down', () => {
+    assert.equal(PokerApp.clampBuyins(3.9), 3);
+  });
+
+  await t.test('clamps a negative value to 0', () => {
+    assert.equal(PokerApp.clampBuyins(-2), 0);
+  });
+
+  await t.test('treats an empty string as 0', () => {
+    assert.equal(PokerApp.clampBuyins(''), 0);
+  });
+
+  await t.test('treats non-numeric input as 0', () => {
+    assert.equal(PokerApp.clampBuyins('abc'), 0);
+  });
+
+  await t.test('parses a numeric string', () => {
+    assert.equal(PokerApp.clampBuyins('7'), 7);
+  });
+});
+
 test('computePlayerBuyinCost', () => {
   const player = { buyins: 3, cashout: null };
   assert.equal(PokerApp.computePlayerBuyinCost(player, 20), 60);
