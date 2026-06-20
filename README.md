@@ -13,7 +13,7 @@ Both pages share the same data (saved in `localStorage`, and optionally synced l
 
 ## Chip ratio
 
-By default 1 chip = $1. If your group plays with a different ratio (e.g. 4 chips = $1), set it on the Settle Game page — cash-outs can be entered either in chips or dollars and stay in sync.
+By default 1 chip = $1. If your group plays with a different ratio (e.g. 4 chips = $1), set it on the Buy-ins page — cash-outs on the Settle Game page can then be entered either in chips or dollars and stay in sync.
 
 ## Sharing a live game
 
@@ -44,5 +44,6 @@ If `firebase-config.js` still has placeholder values, the Share panel will tell 
 ## Tests
 
 ```
+npx playwright install --with-deps chromium   # one-time, for the responsive/browser tests
 npm test
 ```
