@@ -22,6 +22,11 @@
       <label for="buyinValue">$ per buy-in</label>
       <input type="number" id="buyinValue" min="0" step="0.01" value="20">
     </div>
+    <div class="buyin-value-row" style="margin-top:10px;">
+      <label for="chipsPerDollar">Chips per $1</label>
+      <input type="number" id="chipsPerDollar" min="0.0001" step="0.01" value="1">
+    </div>
+    <div class="chip-hint" id="chipHint"></div>
   </div>
 
   <div class="panel">
@@ -84,6 +89,8 @@
   let state = PokerShared.loadState();
 
   const buyinValueInput = document.getElementById('buyinValue');
+  const chipsPerDollarInput = document.getElementById('chipsPerDollar');
+  const chipHint = document.getElementById('chipHint');
   const newPlayerNameInput = document.getElementById('newPlayerName');
   const addPlayerBtn = document.getElementById('addPlayerBtn');
   const playersBody = document.getElementById('playersBody');
@@ -124,6 +131,10 @@
 
   function render() {
     buyinValueInput.value = state.buyinValue;
+    chipsPerDollarInput.value = state.chipsPerDollar;
+    chipHint.textContent = state.chipsPerDollar === 1
+      ? ''
+      : `1 buy-in (${fmtMoney(state.buyinValue)}) = ${PokerApp.dollarsToChips(state.buyinValue, state.chipsPerDollar)} chips`;
 
     playersBody.innerHTML = '';
     emptyState.style.display = state.players.length === 0 ? 'block' : 'none';
@@ -139,30 +150,33 @@
       const countTd = document.createElement('td');
       const countWrap = document.createElement('div');
       countWrap.className = 'count-controls';
-      const minusBtn = document.createElement('button');
-      minusBtn.className = 'secondary';
-      minusBtn.textContent = '-';
-      minusBtn.disabled = player.buyins <= 0;
-      minusBtn.addEventListener('click', () => {
+      const countNum = document.createElement('span');
+      countNum.className = 'count-num';
+      countNum.textContent = player.buyins;
+      const rebuyBtn = document.createElement('button');
+      rebuyBtn.className = 'rebuy-btn';
+      rebuyBtn.textContent = 'Rebuy';
+      rebuyBtn.title = 'Add another buy-in for ' + player.name;
+      rebuyBtn.addEventListener('click', () => {
+        player.buyins += 1;
+        saveState();
+        render();
+      });
+      const undoBtn = document.createElement('button');
+      undoBtn.className = 'secondary icon undo-btn';
+      undoBtn.textContent = '-';
+      undoBtn.title = 'Remove a buy-in';
+      undoBtn.disabled = player.buyins <= 0;
+      undoBtn.addEventListener('click', () => {
         if (player.buyins > 0) {
           player.buyins -= 1;
           saveState();
           render();
         }
       });
-      const countNum = document.createElement('span');
-      countNum.className = 'count-num';
-      countNum.textContent = player.buyins;
-      const plusBtn = document.createElement('button');
-      plusBtn.textContent = '+';
-      plusBtn.addEventListener('click', () => {
-        player.buyins += 1;
-        saveState();
-        render();
-      });
-      countWrap.appendChild(minusBtn);
       countWrap.appendChild(countNum);
-      countWrap.appendChild(plusBtn);
+      countWrap.appendChild(rebuyBtn);
+      countWrap.appendChild(undoBtn);
       countTd.appendChild(countWrap);
       tr.appendChild(countTd);
 
@@ -200,6 +214,13 @@
   buyinValueInput.addEventListener('input', () => {
     const val = Number(buyinValueInput.value);
     state.buyinValue = Number.isFinite(val) && val >= 0 ? val : 0;
+    saveState();
+    render();
+  });
+
+  chipsPerDollarInput.addEventListener('input', () => {
+    const val = Number(chipsPerDollarInput.value);
+    state.chipsPerDollar = Number.isFinite(val) && val > 0 ? val : 1;
     saveState();
     render();
   });

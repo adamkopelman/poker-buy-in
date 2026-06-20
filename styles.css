@@ -142,17 +142,21 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
   align-items: center;
   gap: 6px;
 }
-.count-controls button {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border-radius: 6px;
-  font-size: 1rem;
-}
 .count-num {
   min-width: 22px;
   text-align: center;
   font-weight: 600;
+}
+.rebuy-btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+.undo-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 1rem;
 }
 .cashout-input {
   width: 90px;
