@@ -255,3 +255,51 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
   .settle-table th:nth-child(2), .settle-table td:nth-child(2) { display: none; }
   .cashout-input { width: 70px; }
 }
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+}
+.modal-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal-panel h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+.settlement-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+.settlement-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.settlement-row:last-child { border-bottom: none; }
+.settlement-amount { font-weight: 700; color: var(--accent); }
+.settlement-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+.settlement-warning {
+  color: var(--gold);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}

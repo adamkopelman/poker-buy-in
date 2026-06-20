@@ -175,6 +175,79 @@ test('computeTotals', async (t) => {
   });
 });
 
+test('computeSettlements', async (t) => {
+  await t.test('returns no payments for an empty player list', () => {
+    assert.deepEqual(PokerApp.computeSettlements({ buyinValue: 20, players: [] }), []);
+  });
+
+  await t.test('returns no payments when everyone is already even', () => {
+    const state = {
+      buyinValue: 20,
+      players: [
+        { buyins: 2, cashout: 40 },
+        { buyins: 1, cashout: 20 }
+      ]
+    };
+    assert.deepEqual(PokerApp.computeSettlements(state), []);
+  });
+
+  await t.test('matches a single debtor to a single creditor', () => {
+    const state = {
+      buyinValue: 20,
+      players: [
+        { name: 'Alice', buyins: 1, cashout: 60 },
+        { name: 'Bob', buyins: 2, cashout: 0 }
+      ]
+    };
+    assert.deepEqual(PokerApp.computeSettlements(state), [
+      { from: 'Bob', to: 'Alice', amount: 40 }
+    ]);
+  });
+
+  await t.test('treats a missing cash-out as a full loss', () => {
+    const state = {
+      buyinValue: 20,
+      players: [
+        { name: 'Alice', buyins: 1, cashout: 40 },
+        { name: 'Bob', buyins: 1, cashout: null }
+      ]
+    };
+    assert.deepEqual(PokerApp.computeSettlements(state), [
+      { from: 'Bob', to: 'Alice', amount: 20 }
+    ]);
+  });
+
+  await t.test('settles multiple debtors against multiple creditors', () => {
+    const state = {
+      buyinValue: 20,
+      players: [
+        { name: 'Alice', buyins: 1, cashout: 50 },  // +30
+        { name: 'Bob', buyins: 1, cashout: 30 },    // +10
+        { name: 'Carl', buyins: 1, cashout: 0 },    // -20
+        { name: 'Dana', buyins: 1, cashout: 0 }     // -20
+      ]
+    };
+    const settlements = PokerApp.computeSettlements(state);
+    assert.equal(settlements.length, 3);
+    const totalsByDebtor = {};
+    settlements.forEach(s => {
+      totalsByDebtor[s.from] = (totalsByDebtor[s.from] || 0) + s.amount;
+    });
+    assert.equal(totalsByDebtor['Carl'], 20);
+    assert.equal(totalsByDebtor['Dana'], 20);
+  });
+
+  await t.test('ignores tiny floating point drift', () => {
+    const state = {
+      buyinValue: 0.1,
+      players: [
+        { name: 'Alice', buyins: 3, cashout: 0.3 }
+      ]
+    };
+    assert.deepEqual(PokerApp.computeSettlements(state), []);
+  });
+});
+
 test('normalizeLoadedState', async (t) => {
   await t.test('returns null for garbage input', () => {
     assert.equal(PokerApp.normalizeLoadedState(null), null);
