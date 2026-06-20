@@ -41,6 +41,13 @@
     return { id: id || generateId(), name: name, buyins: 1, cashout: null };
   }
 
+  // Sanitizes a raw buy-in count (e.g. from a number input) into a
+  // non-negative integer, defaulting to 0 for anything invalid.
+  function clampBuyins(value) {
+    var n = Math.floor(Number(value));
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  }
+
   function sanitizePlayer(p) {
     return {
       id: (p && p.id) || generateId(),
@@ -118,6 +125,7 @@
     generateGameId: generateGameId,
     createPlayer: createPlayer,
     sanitizePlayer: sanitizePlayer,
+    clampBuyins: clampBuyins,
     normalizeLoadedState: normalizeLoadedState,
     serializeState: serializeState,
     fmtMoney: fmtMoney,

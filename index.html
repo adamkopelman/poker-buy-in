@@ -150,31 +150,45 @@
       const countTd = document.createElement('td');
       const countWrap = document.createElement('div');
       countWrap.className = 'count-controls';
-      const countNum = document.createElement('span');
-      countNum.className = 'count-num';
-      countNum.textContent = player.buyins;
+      const countInput = document.createElement('input');
+      countInput.type = 'number';
+      countInput.className = 'buyins-input';
+      countInput.min = '0';
+      countInput.step = '1';
+      countInput.value = player.buyins;
+      countInput.title = 'Set buy-ins for ' + player.name;
       const rebuyBtn = document.createElement('button');
       rebuyBtn.className = 'rebuy-btn';
       rebuyBtn.textContent = 'Rebuy';
       rebuyBtn.title = 'Add another buy-in for ' + player.name;
-      rebuyBtn.addEventListener('click', () => {
-        player.buyins += 1;
-        saveState();
-        render();
-      });
       const undoBtn = document.createElement('button');
       undoBtn.className = 'secondary icon undo-btn';
       undoBtn.textContent = '-';
       undoBtn.title = 'Remove a buy-in';
       undoBtn.disabled = player.buyins <= 0;
-      undoBtn.addEventListener('click', () => {
-        if (player.buyins > 0) {
-          player.buyins -= 1;
-          saveState();
-          render();
-        }
+
+      function applyBuyins(newValue) {
+        player.buyins = PokerApp.clampBuyins(newValue);
+        countInput.value = player.buyins;
+        undoBtn.disabled = player.buyins <= 0;
+        totalTd.textContent = fmtMoney(PokerApp.computePlayerBuyinCost(player, state.buyinValue));
+        saveState();
+        renderTotalsOnly();
+      }
+
+      countInput.addEventListener('input', () => {
+        applyBuyins(countInput.value);
       });
-      countWrap.appendChild(countNum);
+      countInput.addEventListener('blur', () => {
+        applyBuyins(countInput.value);
+      });
+      rebuyBtn.addEventListener('click', () => {
+        applyBuyins(player.buyins + 1);
+      });
+      undoBtn.addEventListener('click', () => {
+        if (player.buyins > 0) applyBuyins(player.buyins - 1);
+      });
+      countWrap.appendChild(countInput);
       countWrap.appendChild(rebuyBtn);
       countWrap.appendChild(undoBtn);
       countTd.appendChild(countWrap);
