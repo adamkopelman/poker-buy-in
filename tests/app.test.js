@@ -20,6 +20,35 @@ test('fmtMoney', async (t) => {
   });
 });
 
+test('chipsToDollars / dollarsToChips', async (t) => {
+  await t.test('converts chips to dollars at the given ratio', () => {
+    assert.equal(PokerApp.chipsToDollars(40, 4), 10);
+  });
+
+  await t.test('rounds to the nearest cent', () => {
+    assert.equal(PokerApp.chipsToDollars(10, 3), 3.33);
+  });
+
+  await t.test('returns 0 when chipsPerDollar is 0', () => {
+    assert.equal(PokerApp.chipsToDollars(40, 0), 0);
+  });
+
+  await t.test('converts dollars to chips at the given ratio', () => {
+    assert.equal(PokerApp.dollarsToChips(10, 4), 40);
+  });
+
+  await t.test('round-trips cleanly for a 1:1 ratio', () => {
+    assert.equal(PokerApp.dollarsToChips(PokerApp.chipsToDollars(25, 1), 1), 25);
+  });
+});
+
+test('generateGameId returns unique, url-friendly values', () => {
+  const a = PokerApp.generateGameId();
+  const b = PokerApp.generateGameId();
+  assert.notEqual(a, b);
+  assert.match(a, /^[a-z0-9]+$/);
+});
+
 test('createPlayer', () => {
   const player = PokerApp.createPlayer('Alice');
   assert.equal(player.name, 'Alice');
@@ -137,6 +166,21 @@ test('normalizeLoadedState', async (t) => {
     assert.equal(result.buyinValue, 50);
   });
 
+  await t.test('defaults a missing chipsPerDollar to 1', () => {
+    const result = PokerApp.normalizeLoadedState({ players: [] });
+    assert.equal(result.chipsPerDollar, 1);
+  });
+
+  await t.test('preserves a valid chipsPerDollar', () => {
+    const result = PokerApp.normalizeLoadedState({ chipsPerDollar: 4, players: [] });
+    assert.equal(result.chipsPerDollar, 4);
+  });
+
+  await t.test('rejects a non-positive chipsPerDollar back to 1', () => {
+    const result = PokerApp.normalizeLoadedState({ chipsPerDollar: 0, players: [] });
+    assert.equal(result.chipsPerDollar, 1);
+  });
+
   await t.test('sanitizes malformed player entries', () => {
     const result = PokerApp.normalizeLoadedState({
       buyinValue: 20,
@@ -166,6 +210,7 @@ test('normalizeLoadedState', async (t) => {
 test('serializeState round-trips through normalizeLoadedState', () => {
   const state = {
     buyinValue: 25,
+    chipsPerDollar: 4,
     players: [PokerApp.createPlayer('Carl', 'p1')]
   };
   state.players[0].buyins = 4;
@@ -177,7 +222,7 @@ test('serializeState round-trips through normalizeLoadedState', () => {
 });
 
 test('defaultState', () => {
-  assert.deepEqual(PokerApp.defaultState(), { buyinValue: 20, players: [] });
+  assert.deepEqual(PokerApp.defaultState(), { buyinValue: 20, chipsPerDollar: 1, players: [] });
 });
 
 test('generateId returns unique values', () => {
