@@ -250,9 +250,10 @@
   <div class="footer-note">Data is saved automatically in this browser (localStorage).</div>
 </div>
 
+<script src="app.js"></script>
 <script>
 (function () {
-  const STORAGE_KEY = 'pokerBuyInTracker.v1';
+  const STORAGE_KEY = PokerApp.STORAGE_KEY;
 
   /** @type {{buyinValue: number, players: {id: string, name: string, buyins: number, cashout: number|null}[]}} */
   let state = loadState();
@@ -273,38 +274,20 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && Array.isArray(parsed.players)) {
-          return {
-            buyinValue: typeof parsed.buyinValue === 'number' ? parsed.buyinValue : 20,
-            players: parsed.players.map(p => ({
-              id: p.id || cryptoRandomId(),
-              name: p.name || 'Player',
-              buyins: Number.isFinite(p.buyins) ? p.buyins : 0,
-              cashout: p.cashout === null || p.cashout === undefined || p.cashout === '' ? null : Number(p.cashout)
-            }))
-          };
-        }
+        const normalized = PokerApp.normalizeLoadedState(JSON.parse(raw));
+        if (normalized) return normalized;
       }
     } catch (e) {
       console.warn('Failed to load saved data, starting fresh.', e);
     }
-    return { buyinValue: 20, players: [] };
+    return PokerApp.defaultState();
   }
 
   function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, PokerApp.serializeState(state));
   }
 
-  function cryptoRandomId() {
-    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
-    return 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-  }
-
-  function fmtMoney(n) {
-    const sign = n < 0 ? '-' : '';
-    return sign + '$' + Math.abs(n).toFixed(2).replace(/\.00$/, '');
-  }
+  const fmtMoney = PokerApp.fmtMoney;
 
   function render() {
     buyinValueInput.value = state.buyinValue;
@@ -312,19 +295,8 @@
     playersBody.innerHTML = '';
     emptyState.style.display = state.players.length === 0 ? 'block' : 'none';
 
-    let totalBuyins = 0;
-    let totalCashout = 0;
-    let anyCashoutMissing = false;
-
     state.players.forEach(player => {
-      const buyinCost = player.buyins * state.buyinValue;
-      totalBuyins += buyinCost;
-      if (player.cashout === null) {
-        anyCashoutMissing = true;
-      } else {
-        totalCashout += player.cashout;
-      }
-      const net = (player.cashout === null ? 0 : player.cashout) - buyinCost;
+      const net = PokerApp.computePlayerNet(player, state.buyinValue);
 
       const tr = document.createElement('tr');
 
@@ -404,53 +376,27 @@
       playersBody.appendChild(tr);
     });
 
-    totalBuyinsEl.textContent = fmtMoney(totalBuyins);
-    totalCashoutEl.textContent = fmtMoney(totalCashout);
-
-    if (state.players.length > 0 && !anyCashoutMissing) {
-      const diff = Math.round((totalCashout - totalBuyins) * 100) / 100;
-      if (Math.abs(diff) > 0.005) {
-        balanceRow.style.display = 'flex';
-        balanceMsg.textContent = diff > 0
-          ? `Cash-outs exceed buy-ins by ${fmtMoney(diff)} — check your numbers.`
-          : `Cash-outs are short of buy-ins by ${fmtMoney(Math.abs(diff))} — check your numbers.`;
-      } else {
-        balanceRow.style.display = 'flex';
-        balanceMsg.textContent = '✓ Buy-ins and cash-outs balance.';
-        balanceMsg.classList.remove('balance-warning');
-      }
-    } else {
-      balanceRow.style.display = 'none';
-      balanceMsg.classList.add('balance-warning');
-    }
+    renderTotalsOnly();
   }
 
   function renderTotalsOnly() {
-    let totalBuyins = 0;
-    let totalCashout = 0;
-    let anyCashoutMissing = false;
-    state.players.forEach(p => {
-      totalBuyins += p.buyins * state.buyinValue;
-      if (p.cashout === null) anyCashoutMissing = true;
-      else totalCashout += p.cashout;
-    });
-    totalBuyinsEl.textContent = fmtMoney(totalBuyins);
-    totalCashoutEl.textContent = fmtMoney(totalCashout);
+    const totals = PokerApp.computeTotals(state);
+    totalBuyinsEl.textContent = fmtMoney(totals.totalBuyins);
+    totalCashoutEl.textContent = fmtMoney(totals.totalCashout);
 
-    if (state.players.length > 0 && !anyCashoutMissing) {
-      const diff = Math.round((totalCashout - totalBuyins) * 100) / 100;
+    if (totals.balanced === null) {
+      balanceRow.style.display = 'none';
+    } else {
       balanceRow.style.display = 'flex';
-      if (Math.abs(diff) > 0.005) {
-        balanceMsg.classList.add('balance-warning');
-        balanceMsg.textContent = diff > 0
-          ? `Cash-outs exceed buy-ins by ${fmtMoney(diff)} — check your numbers.`
-          : `Cash-outs are short of buy-ins by ${fmtMoney(Math.abs(diff))} — check your numbers.`;
-      } else {
+      if (totals.balanced) {
         balanceMsg.classList.remove('balance-warning');
         balanceMsg.textContent = '✓ Buy-ins and cash-outs balance.';
+      } else {
+        balanceMsg.classList.add('balance-warning');
+        balanceMsg.textContent = totals.diff > 0
+          ? `Cash-outs exceed buy-ins by ${fmtMoney(totals.diff)} — check your numbers.`
+          : `Cash-outs are short of buy-ins by ${fmtMoney(Math.abs(totals.diff))} — check your numbers.`;
       }
-    } else {
-      balanceRow.style.display = 'none';
     }
   }
 
@@ -467,7 +413,7 @@
       newPlayerNameInput.focus();
       return;
     }
-    state.players.push({ id: cryptoRandomId(), name, buyins: 1, cashout: null });
+    state.players.push(PokerApp.createPlayer(name));
     newPlayerNameInput.value = '';
     saveState();
     render();
