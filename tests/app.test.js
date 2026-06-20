@@ -83,6 +83,28 @@ test('clampBuyins', async (t) => {
   });
 });
 
+test('dollarsToBuyins', async (t) => {
+  await t.test('converts an exact multiple of the buy-in value', () => {
+    assert.equal(PokerApp.dollarsToBuyins(60, 20), 3);
+  });
+
+  await t.test('floors a partial buy-in down', () => {
+    assert.equal(PokerApp.dollarsToBuyins(50, 20), 2);
+  });
+
+  await t.test('returns 0 when buyinValue is 0', () => {
+    assert.equal(PokerApp.dollarsToBuyins(50, 0), 0);
+  });
+
+  await t.test('clamps a negative amount to 0', () => {
+    assert.equal(PokerApp.dollarsToBuyins(-20, 20), 0);
+  });
+
+  await t.test('ignores tiny floating point drift', () => {
+    assert.equal(PokerApp.dollarsToBuyins(0.3, 0.1), 3);
+  });
+});
+
 test('computePlayerBuyinCost', () => {
   const player = { buyins: 3, cashout: null };
   assert.equal(PokerApp.computePlayerBuyinCost(player, 20), 60);

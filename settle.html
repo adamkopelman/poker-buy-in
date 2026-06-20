@@ -75,7 +75,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 <script src="shared.js?v=4"></script>
 <script>
 (function () {
@@ -149,50 +149,48 @@
       }
 
       const buyinsTd = document.createElement('td');
-      const buyinsWrap = document.createElement('div');
-      buyinsWrap.className = 'count-controls';
-      const countInput = document.createElement('input');
-      countInput.type = 'number';
-      countInput.className = 'buyins-input';
-      countInput.min = '0';
-      countInput.step = '1';
-      countInput.value = player.buyins;
-      countInput.title = 'Set buy-ins for ' + player.name;
-      const plusBtn = document.createElement('button');
-      plusBtn.className = 'secondary icon plus-btn';
-      plusBtn.textContent = '+';
-      plusBtn.title = 'Add a buy-in for ' + player.name;
-      const undoBtn = document.createElement('button');
-      undoBtn.className = 'secondary icon undo-btn';
-      undoBtn.textContent = '-';
-      undoBtn.title = 'Remove a buy-in';
-      undoBtn.disabled = player.buyins <= 0;
+      buyinsTd.innerHTML =
+        '<div class="cashout-cell">' +
+        '<div class="cashout-line"><span class="cashout-label">buy-ins</span><input type="number" class="cashout-input buyins-count-input" min="0" step="1"></div>' +
+        '<div class="cashout-line"><span class="cashout-label">chips</span><input type="number" class="cashout-input buyin-chip-input" min="0" step="1"></div>' +
+        '<div class="cashout-line"><span class="cashout-label">$</span><input type="number" class="cashout-input buyin-dollar-input" min="0" step="0.01"></div>' +
+        '</div>';
+      const buyinsCountInput = buyinsTd.querySelector('.buyins-count-input');
+      const buyinChipInput = buyinsTd.querySelector('.buyin-chip-input');
+      const buyinDollarInput = buyinsTd.querySelector('.buyin-dollar-input');
 
-      function applyBuyins(newValue) {
+      function syncBuyinInputsFromState() {
+        const cost = PokerApp.computePlayerBuyinCost(player, state.buyinValue);
+        buyinsCountInput.value = player.buyins;
+        buyinChipInput.value = PokerApp.dollarsToChips(cost, state.chipsPerDollar);
+        buyinDollarInput.value = cost;
+      }
+      syncBuyinInputsFromState();
+
+      function applyBuyins(newValue, sourceField) {
         player.buyins = PokerApp.clampBuyins(newValue);
-        countInput.value = player.buyins;
-        undoBtn.disabled = player.buyins <= 0;
+        const cost = PokerApp.computePlayerBuyinCost(player, state.buyinValue);
+        if (sourceField !== 'count') buyinsCountInput.value = player.buyins;
+        if (sourceField !== 'chips') buyinChipInput.value = PokerApp.dollarsToChips(cost, state.chipsPerDollar);
+        if (sourceField !== 'dollars') buyinDollarInput.value = cost;
         updateEarn();
         saveState();
         renderTotalsOnly();
       }
 
-      countInput.addEventListener('input', () => {
-        applyBuyins(countInput.value);
+      buyinsCountInput.addEventListener('input', () => {
+        applyBuyins(buyinsCountInput.value, 'count');
       });
-      countInput.addEventListener('blur', () => {
-        applyBuyins(countInput.value);
+      buyinChipInput.addEventListener('input', () => {
+        const dollars = PokerApp.chipsToDollars(Number(buyinChipInput.value), state.chipsPerDollar);
+        applyBuyins(PokerApp.dollarsToBuyins(dollars, state.buyinValue), 'chips');
       });
-      plusBtn.addEventListener('click', () => {
-        applyBuyins(player.buyins + 1);
+      buyinDollarInput.addEventListener('input', () => {
+        applyBuyins(PokerApp.dollarsToBuyins(Number(buyinDollarInput.value), state.buyinValue), 'dollars');
       });
-      undoBtn.addEventListener('click', () => {
-        if (player.buyins > 0) applyBuyins(player.buyins - 1);
-      });
-      buyinsWrap.appendChild(countInput);
-      buyinsWrap.appendChild(plusBtn);
-      buyinsWrap.appendChild(undoBtn);
-      buyinsTd.appendChild(buyinsWrap);
+      buyinsCountInput.addEventListener('blur', render);
+      buyinChipInput.addEventListener('blur', render);
+      buyinDollarInput.addEventListener('blur', render);
       tr.appendChild(buyinsTd);
 
       const cashoutTd = document.createElement('td');

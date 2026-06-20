@@ -79,7 +79,7 @@ test('buy-in editor (+/- buttons and count input) stays visible and usable on ph
   }
 });
 
-test('settle page buy-in editor (+/- buttons and count input) stays visible and usable on phones', async (t) => {
+test('settle page buy-in inputs (buy-ins, chips, dollars) stay visible and usable on phones', async (t) => {
   const server = await startServer();
   const { port } = server.address();
   const browser = await chromium.launch();
@@ -95,18 +95,17 @@ test('settle page buy-in editor (+/- buttons and count input) stays visible and 
           await page.click('#addPlayerBtn');
 
           await page.goto(`http://127.0.0.1:${port}/settle.html`);
-          const plusBtn = page.locator('.plus-btn').first();
-          const undoBtn = page.locator('.undo-btn').first();
-          const countInput = page.locator('.buyins-input').first();
+          const countInput = page.locator('.buyins-count-input').first();
+          const chipInput = page.locator('.buyin-chip-input').first();
+          const dollarInput = page.locator('.buyin-dollar-input').first();
 
-          await plusBtn.waitFor({ state: 'visible', timeout: 2000 });
-          await undoBtn.waitFor({ state: 'visible', timeout: 2000 });
           await countInput.waitFor({ state: 'visible', timeout: 2000 });
+          await chipInput.waitFor({ state: 'visible', timeout: 2000 });
+          await dollarInput.waitFor({ state: 'visible', timeout: 2000 });
 
-          const before = Number(await countInput.inputValue());
-          await plusBtn.click();
-          const after = Number(await countInput.inputValue());
-          assert.equal(after, before + 1, `+ button should increment buy-ins on ${vp.name}`);
+          await countInput.fill('3');
+          await countInput.dispatchEvent('input');
+          assert.equal(await dollarInput.inputValue(), '60', `dollar field should reflect 3 buy-ins on ${vp.name}`);
         } finally {
           await context.close();
         }

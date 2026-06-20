@@ -48,6 +48,15 @@
     return Number.isFinite(n) && n >= 0 ? n : 0;
   }
 
+  // Converts a total dollar amount into a whole number of buy-ins at the
+  // given buy-in value, rounding away floating point drift before
+  // flooring (so e.g. 60 / 20 reliably yields 3, not 2.9999999998).
+  function dollarsToBuyins(dollars, buyinValue) {
+    if (!buyinValue) return 0;
+    var raw = dollars / buyinValue;
+    return clampBuyins(Math.round(raw * 1e6) / 1e6);
+  }
+
   function sanitizePlayer(p) {
     return {
       id: (p && p.id) || generateId(),
@@ -165,6 +174,7 @@
     createPlayer: createPlayer,
     sanitizePlayer: sanitizePlayer,
     clampBuyins: clampBuyins,
+    dollarsToBuyins: dollarsToBuyins,
     normalizeLoadedState: normalizeLoadedState,
     serializeState: serializeState,
     fmtMoney: fmtMoney,
