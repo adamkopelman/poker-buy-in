@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Buy-In Tracker — Settle Game</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>Poker Buy-In Tracker</h1>
+  <div class="subtitle">Cash everyone out and see who wins and who loses.</div>
+
+  <div class="tab-nav">
+    <a href="index.html" class="tab-link" id="navBuyins">Buy-ins</a>
+    <a href="settle.html" class="tab-link active" id="navSettle">Settle Game</a>
+  </div>
+
+  <div class="panel">
+    <h2>Chip ratio</h2>
+    <div class="buyin-value-row">
+      <label for="chipsPerDollar">Chips per $1</label>
+      <input type="number" id="chipsPerDollar" min="0.0001" step="0.01" value="1">
+    </div>
+    <div class="chip-hint" id="chipHint"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Share live game</h2>
+    <div class="share-row">
+      <button class="secondary" id="startShareBtn">Start Shared Game</button>
+      <button class="secondary" id="copyLinkBtn" style="display:none;">Copy Link</button>
+      <button class="danger" id="stopShareBtn" style="display:none;">Stop Sharing</button>
+    </div>
+    <div class="share-link-box" id="shareLinkBox" style="display:none;">
+      <input type="text" id="shareLinkInput" readonly>
+    </div>
+    <div class="sync-status" id="syncStatus"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Settle up</h2>
+    <div id="playersTableWrap">
+      <table id="playersTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Buy-ins</th>
+            <th>Cash-out</th>
+            <th class="earn">Net</th>
+          </tr>
+        </thead>
+        <tbody id="playersBody"></tbody>
+      </table>
+      <div id="emptyState" class="empty-state" style="display:none;">No players yet. Add players on the Buy-ins page first.</div>
+    </div>
+    <div class="totals">
+      <span>Total buy-ins: <strong id="totalBuyins">$0</strong></span>
+      <span>Total cash-out: <strong id="totalCashout">$0</strong></span>
+    </div>
+    <div class="totals" id="balanceRow" style="display:none;">
+      <span class="balance-warning" id="balanceMsg"></span>
+    </div>
+  </div>
+
+  <div class="actions-row">
+    <button class="secondary" id="newGameBtn">New Game (reset buy-ins &amp; cash-outs)</button>
+    <button class="danger" id="clearAllBtn">Clear All Data</button>
+  </div>
+
+  <div class="footer-note">Data is saved automatically in this browser (localStorage). Need to add buy-ins? Head to <a href="index.html" id="footerBuyinsLink" style="color:inherit;">Buy-ins</a>.</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script src="shared.js"></script>
+<script>
+(function () {
+  let state = PokerShared.loadState();
+
+  const chipsPerDollarInput = document.getElementById('chipsPerDollar');
+  const chipHint = document.getElementById('chipHint');
+  const playersBody = document.getElementById('playersBody');
+  const emptyState = document.getElementById('emptyState');
+  const totalBuyinsEl = document.getElementById('totalBuyins');
+  const totalCashoutEl = document.getElementById('totalCashout');
+  const balanceRow = document.getElementById('balanceRow');
+  const balanceMsg = document.getElementById('balanceMsg');
+  const newGameBtn = document.getElementById('newGameBtn');
+  const clearAllBtn = document.getElementById('clearAllBtn');
+  const navBuyins = document.getElementById('navBuyins');
+  const footerBuyinsLink = document.getElementById('footerBuyinsLink');
+
+  const fmtMoney = PokerApp.fmtMoney;
+
+  function updateBuyinsLinks(gameId) {
+    const query = gameId ? ('?game=' + gameId) : '';
+    navBuyins.href = 'index.html' + query;
+    footerBuyinsLink.href = 'index.html' + query;
+  }
+  updateBuyinsLinks(new URLSearchParams(location.search).get('game'));
+
+  const sync = PokerShared.createSyncController({
+    elements: {
+      startBtn: document.getElementById('startShareBtn'),
+      copyBtn: document.getElementById('copyLinkBtn'),
+      stopBtn: document.getElementById('stopShareBtn'),
+      linkBox: document.getElementById('shareLinkBox'),
+      linkInput: document.getElementById('shareLinkInput'),
+      status: document.getElementById('syncStatus')
+    },
+    getState: () => state,
+    setState: (s) => { state = s; },
+    onRemoteChange: render,
+    onShareChange: updateBuyinsLinks
+  });
+
+  function saveState() {
+    sync.saveLocalAndSync(state);
+  }
+
+  function render() {
+    chipsPerDollarInput.value = state.chipsPerDollar;
+    chipHint.textContent = state.chipsPerDollar === 1
+      ? ''
+      : `1 buy-in (${fmtMoney(state.buyinValue)}) = ${PokerApp.dollarsToChips(state.buyinValue, state.chipsPerDollar)} chips`;
+
+    playersBody.innerHTML = '';
+    emptyState.style.display = state.players.length === 0 ? 'block' : 'none';
+
+    state.players.forEach(player => {
+      const net = PokerApp.computePlayerNet(player, state.buyinValue);
+
+      const tr = document.createElement('tr');
+
+      const nameTd = document.createElement('td');
+      nameTd.className = 'player-name';
+      nameTd.textContent = player.name;
+      tr.appendChild(nameTd);
+
+      const buyinsTd = document.createElement('td');
+      buyinsTd.textContent = player.buyins;
+      tr.appendChild(buyinsTd);
+
+      const cashoutTd = document.createElement('td');
+      cashoutTd.innerHTML =
+        '<div class="cashout-cell">' +
+        '<div class="cashout-line"><span class="cashout-label">chips</span><input type="number" class="cashout-input chip-cashout-input" min="0" step="1" placeholder="—"></div>' +
+        '<div class="cashout-line"><span class="cashout-label">$</span><input type="number" class="cashout-input dollar-cashout-input" min="0" step="0.01" placeholder="—"></div>' +
+        '</div>';
+      const chipInput = cashoutTd.querySelector('.chip-cashout-input');
+      const dollarInput = cashoutTd.querySelector('.dollar-cashout-input');
+
+      function syncInputsFromState() {
+        chipInput.value = player.cashout === null ? '' : PokerApp.dollarsToChips(player.cashout, state.chipsPerDollar);
+        dollarInput.value = player.cashout === null ? '' : player.cashout;
+      }
+      syncInputsFromState();
+
+      chipInput.addEventListener('input', () => {
+        const val = chipInput.value;
+        player.cashout = val === '' ? null : PokerApp.chipsToDollars(Number(val), state.chipsPerDollar);
+        dollarInput.value = player.cashout === null ? '' : player.cashout;
+        saveState();
+        renderTotalsOnly();
+      });
+      dollarInput.addEventListener('input', () => {
+        const val = dollarInput.value;
+        player.cashout = val === '' ? null : Number(val);
+        chipInput.value = player.cashout === null ? '' : PokerApp.dollarsToChips(player.cashout, state.chipsPerDollar);
+        saveState();
+        renderTotalsOnly();
+      });
+      chipInput.addEventListener('blur', render);
+      dollarInput.addEventListener('blur', render);
+      tr.appendChild(cashoutTd);
+
+      const earnTd = document.createElement('td');
+      earnTd.className = 'earn ' + (net > 0 ? 'positive' : net < 0 ? 'negative' : 'zero');
+      earnTd.textContent = player.cashout === null ? '—' : fmtMoney(net);
+      tr.appendChild(earnTd);
+
+      playersBody.appendChild(tr);
+    });
+
+    renderTotalsOnly();
+  }
+
+  function renderTotalsOnly() {
+    const totals = PokerApp.computeTotals(state);
+    totalBuyinsEl.textContent = fmtMoney(totals.totalBuyins);
+    totalCashoutEl.textContent = fmtMoney(totals.totalCashout);
+
+    if (totals.balanced === null) {
+      balanceRow.style.display = 'none';
+    } else {
+      balanceRow.style.display = 'flex';
+      if (totals.balanced) {
+        balanceMsg.classList.remove('balance-warning');
+        balanceMsg.textContent = '✓ Buy-ins and cash-outs balance.';
+      } else {
+        balanceMsg.classList.add('balance-warning');
+        balanceMsg.textContent = totals.diff > 0
+          ? `Cash-outs exceed buy-ins by ${fmtMoney(totals.diff)} — check your numbers.`
+          : `Cash-outs are short of buy-ins by ${fmtMoney(Math.abs(totals.diff))} — check your numbers.`;
+      }
+    }
+  }
+
+  chipsPerDollarInput.addEventListener('input', () => {
+    const val = Number(chipsPerDollarInput.value);
+    state.chipsPerDollar = Number.isFinite(val) && val > 0 ? val : 1;
+    saveState();
+    render();
+  });
+
+  newGameBtn.addEventListener('click', () => {
+    if (state.players.length === 0) return;
+    if (confirm('Start a new game? This resets everyone\'s buy-ins and cash-outs but keeps the player list.')) {
+      state.players.forEach(p => { p.buyins = 0; p.cashout = null; });
+      saveState();
+      render();
+    }
+  });
+
+  clearAllBtn.addEventListener('click', () => {
+    if (confirm('Clear all players and data? This cannot be undone.')) {
+      state = { buyinValue: state.buyinValue, chipsPerDollar: state.chipsPerDollar, players: [] };
+      saveState();
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -10,12 +10,31 @@
   var STORAGE_KEY = 'pokerBuyInTracker.v1';
 
   function defaultState() {
-    return { buyinValue: 20, players: [] };
+    return { buyinValue: 20, chipsPerDollar: 1, players: [] };
   }
 
   function generateId() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
     return 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  // Short, URL-friendly id for shared game links (not cryptographically
+  // significant — the game data itself has no auth, just an unguessable slug).
+  function generateGameId() {
+    return Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function roundToCents(n) {
+    return Math.round(n * 100) / 100;
+  }
+
+  function chipsToDollars(chips, chipsPerDollar) {
+    if (!chipsPerDollar) return 0;
+    return roundToCents(chips / chipsPerDollar);
+  }
+
+  function dollarsToChips(dollars, chipsPerDollar) {
+    return roundToCents(dollars * chipsPerDollar);
   }
 
   function createPlayer(name, id) {
@@ -39,6 +58,9 @@
     if (!parsed || !Array.isArray(parsed.players)) return null;
     return {
       buyinValue: typeof parsed.buyinValue === 'number' ? parsed.buyinValue : 20,
+      chipsPerDollar: typeof parsed.chipsPerDollar === 'number' && parsed.chipsPerDollar > 0
+        ? parsed.chipsPerDollar
+        : 1,
       players: parsed.players.map(sanitizePlayer)
     };
   }
@@ -93,11 +115,15 @@
     STORAGE_KEY: STORAGE_KEY,
     defaultState: defaultState,
     generateId: generateId,
+    generateGameId: generateGameId,
     createPlayer: createPlayer,
     sanitizePlayer: sanitizePlayer,
     normalizeLoadedState: normalizeLoadedState,
     serializeState: serializeState,
     fmtMoney: fmtMoney,
+    roundToCents: roundToCents,
+    chipsToDollars: chipsToDollars,
+    dollarsToChips: dollarsToChips,
     computePlayerBuyinCost: computePlayerBuyinCost,
     computePlayerNet: computePlayerNet,
     computeTotals: computeTotals
