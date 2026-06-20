@@ -79,6 +79,45 @@ test('buy-in editor (+/- buttons and count input) stays visible and usable on ph
   }
 });
 
+test('settle page buy-in editor (+/- buttons and count input) stays visible and usable on phones', async (t) => {
+  const server = await startServer();
+  const { port } = server.address();
+  const browser = await chromium.launch();
+
+  try {
+    for (const vp of PHONE_VIEWPORTS) {
+      await t.test(vp.name, async () => {
+        const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+        const page = await context.newPage();
+        try {
+          await page.goto(`http://127.0.0.1:${port}/index.html`);
+          await page.fill('#newPlayerName', 'Carl');
+          await page.click('#addPlayerBtn');
+
+          await page.goto(`http://127.0.0.1:${port}/settle.html`);
+          const plusBtn = page.locator('.plus-btn').first();
+          const undoBtn = page.locator('.undo-btn').first();
+          const countInput = page.locator('.buyins-input').first();
+
+          await plusBtn.waitFor({ state: 'visible', timeout: 2000 });
+          await undoBtn.waitFor({ state: 'visible', timeout: 2000 });
+          await countInput.waitFor({ state: 'visible', timeout: 2000 });
+
+          const before = Number(await countInput.inputValue());
+          await plusBtn.click();
+          const after = Number(await countInput.inputValue());
+          assert.equal(after, before + 1, `+ button should increment buy-ins on ${vp.name}`);
+        } finally {
+          await context.close();
+        }
+      });
+    }
+  } finally {
+    await browser.close();
+    server.close();
+  }
+});
+
 test('settle page cash-out inputs stay visible on phones', async (t) => {
   const server = await startServer();
   const { port } = server.address();
@@ -108,43 +147,20 @@ test('settle page cash-out inputs stay visible on phones', async (t) => {
   }
 });
 
-test('settle page hides its informational Buy-ins column only below the breakpoint', async () => {
+test('neither page hides its Buy-ins column, even below the breakpoint', async () => {
   const server = await startServer();
   const { port } = server.address();
   const browser = await chromium.launch();
 
   try {
-    const narrow = await browser.newContext({ viewport: { width: 480, height: 800 } });
-    const narrowPage = await narrow.newPage();
-    await narrowPage.goto(`http://127.0.0.1:${port}/settle.html`);
-    const narrowDisplay = await narrowPage.locator('#playersTable thead th').nth(1).evaluate(el => getComputedStyle(el).display);
-    assert.equal(narrowDisplay, 'none');
-    await narrow.close();
-
-    const wide = await browser.newContext({ viewport: { width: 481, height: 800 } });
-    const widePage = await wide.newPage();
-    await widePage.goto(`http://127.0.0.1:${port}/settle.html`);
-    const wideDisplay = await widePage.locator('#playersTable thead th').nth(1).evaluate(el => getComputedStyle(el).display);
-    assert.notEqual(wideDisplay, 'none');
-    await wide.close();
-  } finally {
-    await browser.close();
-    server.close();
-  }
-});
-
-test('buy-ins page never hides its Buy-ins column, even below the breakpoint', async () => {
-  const server = await startServer();
-  const { port } = server.address();
-  const browser = await chromium.launch();
-
-  try {
-    const context = await browser.newContext({ viewport: { width: 320, height: 568 } });
-    const page = await context.newPage();
-    await page.goto(`http://127.0.0.1:${port}/index.html`);
-    const display = await page.locator('#playersTable thead th').nth(1).evaluate(el => getComputedStyle(el).display);
-    assert.notEqual(display, 'none');
-    await context.close();
+    for (const file of ['index.html', 'settle.html']) {
+      const context = await browser.newContext({ viewport: { width: 320, height: 568 } });
+      const page = await context.newPage();
+      await page.goto(`http://127.0.0.1:${port}/${file}`);
+      const display = await page.locator('#playersTable thead th').nth(1).evaluate(el => getComputedStyle(el).display);
+      assert.notEqual(display, 'none', `${file} should not hide its Buy-ins column`);
+      await context.close();
+    }
   } finally {
     await browser.close();
     server.close();
