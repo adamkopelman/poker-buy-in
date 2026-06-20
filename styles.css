@@ -153,11 +153,7 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
   text-align: center;
   font-weight: 600;
 }
-.rebuy-btn {
-  padding: 6px 12px;
-  font-size: 0.85rem;
-}
-.undo-btn {
+.plus-btn, .undo-btn {
   width: 28px;
   height: 28px;
   padding: 0;
