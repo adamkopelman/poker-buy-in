@@ -5,5 +5,8 @@
   "description": "Poker buy-in tracker",
   "scripts": {
     "test": "node --test"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.0"
   }
 }
