@@ -118,6 +118,45 @@
     };
   }
 
+  // Reduces everyone's net win/loss to a minimal-ish list of who-pays-whom
+  // settlements, by greedily matching the biggest debtor against the
+  // biggest creditor until everyone's balance is zero. A missing cash-out
+  // is treated as 0 (same as computePlayerNet).
+  function computeSettlements(state) {
+    var debtors = [];
+    var creditors = [];
+
+    state.players.forEach(function (p) {
+      var net = roundToCents(computePlayerNet(p, state.buyinValue));
+      if (net < -0.005) debtors.push({ name: p.name, amount: -net });
+      else if (net > 0.005) creditors.push({ name: p.name, amount: net });
+    });
+
+    debtors.sort(function (a, b) { return b.amount - a.amount; });
+    creditors.sort(function (a, b) { return b.amount - a.amount; });
+
+    var transactions = [];
+    var i = 0;
+    var j = 0;
+    while (i < debtors.length && j < creditors.length) {
+      var debtor = debtors[i];
+      var creditor = creditors[j];
+      var amount = roundToCents(Math.min(debtor.amount, creditor.amount));
+
+      if (amount > 0.005) {
+        transactions.push({ from: debtor.name, to: creditor.name, amount: amount });
+      }
+
+      debtor.amount = roundToCents(debtor.amount - amount);
+      creditor.amount = roundToCents(creditor.amount - amount);
+
+      if (debtor.amount <= 0.005) i++;
+      if (creditor.amount <= 0.005) j++;
+    }
+
+    return transactions;
+  }
+
   return {
     STORAGE_KEY: STORAGE_KEY,
     defaultState: defaultState,
@@ -132,6 +171,7 @@
     roundToCents: roundToCents,
     chipsToDollars: chipsToDollars,
     dollarsToChips: dollarsToChips,
+    computeSettlements: computeSettlements,
     computePlayerBuyinCost: computePlayerBuyinCost,
     computePlayerNet: computePlayerNet,
     computeTotals: computeTotals

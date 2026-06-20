@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Poker Buy-In Tracker — Settle Game</title>
-<link rel="stylesheet" href="styles.css?v=2">
+<link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
 <div class="wrap">
@@ -56,6 +56,7 @@
   </div>
 
   <div class="actions-row">
+    <button id="closeTableBtn">Close Table</button>
     <button class="secondary" id="newGameBtn">New Game (reset buy-ins &amp; cash-outs)</button>
     <button class="danger" id="clearAllBtn">Clear All Data</button>
   </div>
@@ -63,11 +64,19 @@
   <div class="footer-note">Data is saved automatically in this browser (localStorage). Need to add buy-ins? Head to <a href="index.html" id="footerBuyinsLink" style="color:inherit;">Buy-ins</a>.</div>
 </div>
 
+<div class="modal-overlay" id="settlementOverlay" style="display:none;">
+  <div class="modal-panel">
+    <h2>Settle Up</h2>
+    <div id="settlementContent"></div>
+    <button class="secondary" id="closeSettlementBtn">Close</button>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="app.js?v=2"></script>
-<script src="shared.js?v=2"></script>
+<script src="app.js?v=3"></script>
+<script src="shared.js?v=3"></script>
 <script>
 (function () {
   let state = PokerShared.loadState();
@@ -83,6 +92,10 @@
   const clearAllBtn = document.getElementById('clearAllBtn');
   const navBuyins = document.getElementById('navBuyins');
   const footerBuyinsLink = document.getElementById('footerBuyinsLink');
+  const closeTableBtn = document.getElementById('closeTableBtn');
+  const settlementOverlay = document.getElementById('settlementOverlay');
+  const settlementContent = document.getElementById('settlementContent');
+  const closeSettlementBtn = document.getElementById('closeSettlementBtn');
 
   const fmtMoney = PokerApp.fmtMoney;
 
@@ -198,6 +211,64 @@
       }
     }
   }
+
+  function showSettlement() {
+    settlementContent.innerHTML = '';
+
+    if (state.players.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'settlement-empty';
+      p.textContent = 'No players yet.';
+      settlementContent.appendChild(p);
+    } else {
+      const totals = PokerApp.computeTotals(state);
+      if (totals.anyCashoutMissing) {
+        const warn = document.createElement('p');
+        warn.className = 'settlement-warning';
+        warn.textContent = 'Heads up: not everyone has a cash-out entered yet. Missing cash-outs are treated as a full loss below.';
+        settlementContent.appendChild(warn);
+      }
+
+      const settlements = PokerApp.computeSettlements(state);
+      if (settlements.length === 0) {
+        const p = document.createElement('p');
+        p.className = 'settlement-empty';
+        p.textContent = 'Everyone is already settled up — no payments needed.';
+        settlementContent.appendChild(p);
+      } else {
+        const list = document.createElement('ul');
+        list.className = 'settlement-list';
+        settlements.forEach(s => {
+          const li = document.createElement('li');
+          li.className = 'settlement-row';
+
+          const who = document.createElement('span');
+          who.textContent = s.from + ' → ' + s.to;
+          li.appendChild(who);
+
+          const amount = document.createElement('span');
+          amount.className = 'settlement-amount';
+          amount.textContent = fmtMoney(s.amount);
+          li.appendChild(amount);
+
+          list.appendChild(li);
+        });
+        settlementContent.appendChild(list);
+      }
+    }
+
+    settlementOverlay.style.display = 'flex';
+  }
+
+  function hideSettlement() {
+    settlementOverlay.style.display = 'none';
+  }
+
+  closeTableBtn.addEventListener('click', showSettlement);
+  closeSettlementBtn.addEventListener('click', hideSettlement);
+  settlementOverlay.addEventListener('click', (e) => {
+    if (e.target === settlementOverlay) hideSettlement();
+  });
 
   newGameBtn.addEventListener('click', () => {
     if (state.players.length === 0) return;
