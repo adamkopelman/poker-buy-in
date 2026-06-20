@@ -252,7 +252,6 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
 .sync-status.connected { color: var(--accent); }
 .sync-status.error { color: var(--danger); }
 @media (max-width: 480px) {
-  .settle-table th:nth-child(2), .settle-table td:nth-child(2) { display: none; }
   .cashout-input { width: 70px; }
 }
 .modal-overlay {

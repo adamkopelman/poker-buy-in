@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Poker Buy-In Tracker — Settle Game</title>
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 <div class="wrap">
@@ -75,8 +75,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="app.js?v=3"></script>
-<script src="shared.js?v=3"></script>
+<script src="app.js?v=4"></script>
+<script src="shared.js?v=4"></script>
 <script>
 (function () {
   let state = PokerShared.loadState();
@@ -134,8 +134,6 @@
     emptyState.style.display = state.players.length === 0 ? 'block' : 'none';
 
     state.players.forEach(player => {
-      const net = PokerApp.computePlayerNet(player, state.buyinValue);
-
       const tr = document.createElement('tr');
 
       const nameTd = document.createElement('td');
@@ -143,8 +141,58 @@
       nameTd.textContent = player.name;
       tr.appendChild(nameTd);
 
+      const earnTd = document.createElement('td');
+      function updateEarn() {
+        const net = PokerApp.computePlayerNet(player, state.buyinValue);
+        earnTd.className = 'earn ' + (net > 0 ? 'positive' : net < 0 ? 'negative' : 'zero');
+        earnTd.textContent = player.cashout === null ? '—' : fmtMoney(net);
+      }
+
       const buyinsTd = document.createElement('td');
-      buyinsTd.textContent = player.buyins;
+      const buyinsWrap = document.createElement('div');
+      buyinsWrap.className = 'count-controls';
+      const countInput = document.createElement('input');
+      countInput.type = 'number';
+      countInput.className = 'buyins-input';
+      countInput.min = '0';
+      countInput.step = '1';
+      countInput.value = player.buyins;
+      countInput.title = 'Set buy-ins for ' + player.name;
+      const plusBtn = document.createElement('button');
+      plusBtn.className = 'secondary icon plus-btn';
+      plusBtn.textContent = '+';
+      plusBtn.title = 'Add a buy-in for ' + player.name;
+      const undoBtn = document.createElement('button');
+      undoBtn.className = 'secondary icon undo-btn';
+      undoBtn.textContent = '-';
+      undoBtn.title = 'Remove a buy-in';
+      undoBtn.disabled = player.buyins <= 0;
+
+      function applyBuyins(newValue) {
+        player.buyins = PokerApp.clampBuyins(newValue);
+        countInput.value = player.buyins;
+        undoBtn.disabled = player.buyins <= 0;
+        updateEarn();
+        saveState();
+        renderTotalsOnly();
+      }
+
+      countInput.addEventListener('input', () => {
+        applyBuyins(countInput.value);
+      });
+      countInput.addEventListener('blur', () => {
+        applyBuyins(countInput.value);
+      });
+      plusBtn.addEventListener('click', () => {
+        applyBuyins(player.buyins + 1);
+      });
+      undoBtn.addEventListener('click', () => {
+        if (player.buyins > 0) applyBuyins(player.buyins - 1);
+      });
+      buyinsWrap.appendChild(countInput);
+      buyinsWrap.appendChild(plusBtn);
+      buyinsWrap.appendChild(undoBtn);
+      buyinsTd.appendChild(buyinsWrap);
       tr.appendChild(buyinsTd);
 
       const cashoutTd = document.createElement('td');
@@ -180,9 +228,7 @@
       dollarInput.addEventListener('blur', render);
       tr.appendChild(cashoutTd);
 
-      const earnTd = document.createElement('td');
-      earnTd.className = 'earn ' + (net > 0 ? 'positive' : net < 0 ? 'negative' : 'zero');
-      earnTd.textContent = player.cashout === null ? '—' : fmtMoney(net);
+      updateEarn();
       tr.appendChild(earnTd);
 
       playersBody.appendChild(tr);
