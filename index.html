@@ -157,10 +157,10 @@
       countInput.step = '1';
       countInput.value = player.buyins;
       countInput.title = 'Set buy-ins for ' + player.name;
-      const rebuyBtn = document.createElement('button');
-      rebuyBtn.className = 'rebuy-btn';
-      rebuyBtn.textContent = 'Rebuy';
-      rebuyBtn.title = 'Add another buy-in for ' + player.name;
+      const plusBtn = document.createElement('button');
+      plusBtn.className = 'secondary icon plus-btn';
+      plusBtn.textContent = '+';
+      plusBtn.title = 'Add a buy-in for ' + player.name;
       const undoBtn = document.createElement('button');
       undoBtn.className = 'secondary icon undo-btn';
       undoBtn.textContent = '-';
@@ -182,14 +182,14 @@
       countInput.addEventListener('blur', () => {
         applyBuyins(countInput.value);
       });
-      rebuyBtn.addEventListener('click', () => {
+      plusBtn.addEventListener('click', () => {
         applyBuyins(player.buyins + 1);
       });
       undoBtn.addEventListener('click', () => {
         if (player.buyins > 0) applyBuyins(player.buyins - 1);
       });
       countWrap.appendChild(countInput);
-      countWrap.appendChild(rebuyBtn);
+      countWrap.appendChild(plusBtn);
       countWrap.appendChild(undoBtn);
       countTd.appendChild(countWrap);
       tr.appendChild(countTd);
