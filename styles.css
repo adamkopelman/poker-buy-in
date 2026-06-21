@@ -56,6 +56,11 @@ h1 {
   color: #fff;
   border-color: var(--accent);
 }
+.install-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
