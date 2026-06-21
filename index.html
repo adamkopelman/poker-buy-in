@@ -4,12 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Poker Buy-In Tracker — Buy-ins</title>
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1724">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <div class="wrap">
   <h1>Poker Buy-In Tracker</h1>
   <div class="subtitle">Track buy-ins, then settle up when the game ends.</div>
+
+  <div class="install-row">
+    <button class="secondary" id="installAppBtn" style="display:none;">Install App</button>
+  </div>
 
   <div class="tab-nav">
     <a href="index.html" class="tab-link active" id="navBuyins">Buy-ins</a>
@@ -83,7 +91,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js?v=6"></script>
-<script src="shared.js?v=4"></script>
+<script src="shared.js?v=5"></script>
 <script>
 (function () {
   let state = PokerShared.loadState();
@@ -109,6 +117,9 @@
     footerSettleLink.href = 'settle.html' + query;
   }
   updateSettleLinks(new URLSearchParams(location.search).get('game'));
+
+  PokerShared.registerServiceWorker();
+  PokerShared.createInstallController(document.getElementById('installAppBtn'));
 
   const sync = PokerShared.createSyncController({
     elements: {

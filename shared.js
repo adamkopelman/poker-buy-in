@@ -149,9 +149,50 @@
     };
   }
 
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('sw.js').catch(function (e) {
+      console.warn('Service worker registration failed.', e);
+    });
+  }
+
+  // Wires up an "Install App" button using the beforeinstallprompt flow.
+  // The button stays hidden until the browser signals the app is
+  // installable, and hides again once installed. `installBtn` may be
+  // omitted/null on browsers that don't support the API (e.g. iOS Safari).
+  function createInstallController(installBtn) {
+    var deferredPrompt = null;
+
+    if (!installBtn) return;
+
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = '';
+    });
+
+    installBtn.addEventListener('click', function () {
+      if (!deferredPrompt) return;
+      installBtn.disabled = true;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.finally(function () {
+        deferredPrompt = null;
+        installBtn.disabled = false;
+        installBtn.style.display = 'none';
+      });
+    });
+
+    window.addEventListener('appinstalled', function () {
+      installBtn.style.display = 'none';
+      deferredPrompt = null;
+    });
+  }
+
   root.PokerShared = {
     loadState: loadState,
     ensureFirebase: ensureFirebase,
-    createSyncController: createSyncController
+    createSyncController: createSyncController,
+    registerServiceWorker: registerServiceWorker,
+    createInstallController: createInstallController
   };
 })(typeof window !== 'undefined' ? window : this);
