@@ -253,6 +253,7 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
 .sync-status.error { color: var(--danger); }
 @media (max-width: 480px) {
   .cashout-input { width: 70px; }
+  .settle-table th:nth-child(2), .settle-table td:nth-child(2) { display: none; }
 }
 .modal-overlay {
   position: fixed;

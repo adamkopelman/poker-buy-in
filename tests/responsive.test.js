@@ -79,7 +79,7 @@ test('buy-in editor (+/- buttons and count input) stays visible and usable on ph
   }
 });
 
-test('settle page buy-in inputs (buy-ins, chips, dollars) stay visible and usable on phones', async (t) => {
+test('settle page cash-out inputs (chips, dollars, buy-ins) stay visible and usable on phones', async (t) => {
   const server = await startServer();
   const { port } = server.address();
   const browser = await chromium.launch();
@@ -95,17 +95,18 @@ test('settle page buy-in inputs (buy-ins, chips, dollars) stay visible and usabl
           await page.click('#addPlayerBtn');
 
           await page.goto(`http://127.0.0.1:${port}/settle.html`);
-          const countInput = page.locator('.buyins-count-input').first();
-          const chipInput = page.locator('.buyin-chip-input').first();
-          const dollarInput = page.locator('.buyin-dollar-input').first();
+          const chipInput = page.locator('.chip-cashout-input').first();
+          const dollarInput = page.locator('.dollar-cashout-input').first();
+          const buyinsInput = page.locator('.buyins-cashout-input').first();
 
-          await countInput.waitFor({ state: 'visible', timeout: 2000 });
           await chipInput.waitFor({ state: 'visible', timeout: 2000 });
           await dollarInput.waitFor({ state: 'visible', timeout: 2000 });
+          await buyinsInput.waitFor({ state: 'visible', timeout: 2000 });
 
-          await countInput.fill('3');
-          await countInput.dispatchEvent('input');
-          assert.equal(await dollarInput.inputValue(), '60', `dollar field should reflect 3 buy-ins on ${vp.name}`);
+          await chipInput.fill('40');
+          await chipInput.dispatchEvent('input');
+          assert.equal(await dollarInput.inputValue(), '40', `dollar field should reflect 40 chips on ${vp.name}`);
+          assert.equal(await buyinsInput.inputValue(), '2', `buy-ins field should reflect 40 chips on ${vp.name}`);
         } finally {
           await context.close();
         }
@@ -117,49 +118,24 @@ test('settle page buy-in inputs (buy-ins, chips, dollars) stay visible and usabl
   }
 });
 
-test('settle page cash-out inputs stay visible on phones', async (t) => {
+test('Buy-ins column stays visible on index.html but hides below the breakpoint on settle.html', async () => {
   const server = await startServer();
   const { port } = server.address();
   const browser = await chromium.launch();
 
   try {
-    for (const vp of PHONE_VIEWPORTS) {
-      await t.test(vp.name, async () => {
-        const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
-        const page = await context.newPage();
-        try {
-          await page.goto(`http://127.0.0.1:${port}/index.html`);
-          await page.fill('#newPlayerName', 'Bob');
-          await page.click('#addPlayerBtn');
+    const context = await browser.newContext({ viewport: { width: 320, height: 568 } });
+    const page = await context.newPage();
 
-          await page.goto(`http://127.0.0.1:${port}/settle.html`);
-          const dollarInput = page.locator('.dollar-cashout-input').first();
-          await dollarInput.waitFor({ state: 'visible', timeout: 2000 });
-        } finally {
-          await context.close();
-        }
-      });
-    }
-  } finally {
-    await browser.close();
-    server.close();
-  }
-});
+    await page.goto(`http://127.0.0.1:${port}/index.html`);
+    const indexDisplay = await page.locator('#playersTable thead th').nth(1).evaluate(el => getComputedStyle(el).display);
+    assert.notEqual(indexDisplay, 'none', 'index.html should not hide its Buy-ins editor column');
 
-test('neither page hides its Buy-ins column, even below the breakpoint', async () => {
-  const server = await startServer();
-  const { port } = server.address();
-  const browser = await chromium.launch();
+    await page.goto(`http://127.0.0.1:${port}/settle.html`);
+    const settleDisplay = await page.locator('#playersTable thead th').nth(1).evaluate(el => getComputedStyle(el).display);
+    assert.equal(settleDisplay, 'none', 'settle.html should hide its informational Buy-ins column below the breakpoint');
 
-  try {
-    for (const file of ['index.html', 'settle.html']) {
-      const context = await browser.newContext({ viewport: { width: 320, height: 568 } });
-      const page = await context.newPage();
-      await page.goto(`http://127.0.0.1:${port}/${file}`);
-      const display = await page.locator('#playersTable thead th').nth(1).evaluate(el => getComputedStyle(el).display);
-      assert.notEqual(display, 'none', `${file} should not hide its Buy-ins column`);
-      await context.close();
-    }
+    await context.close();
   } finally {
     await browser.close();
     server.close();
