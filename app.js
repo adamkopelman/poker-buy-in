@@ -48,13 +48,16 @@
     return Number.isFinite(n) && n >= 0 ? n : 0;
   }
 
-  // Converts a total dollar amount into a whole number of buy-ins at the
-  // given buy-in value, rounding away floating point drift before
-  // flooring (so e.g. 60 / 20 reliably yields 3, not 2.9999999998).
-  function dollarsToBuyins(dollars, buyinValue) {
+  // Converts a cash-out dollar amount into "buy-in units" (e.g. 2 means
+  // your stack is worth 2 buy-ins), allowing fractional results since a
+  // cash-out doesn't have to land on a whole buy-in.
+  function dollarsToBuyinUnits(dollars, buyinValue) {
     if (!buyinValue) return 0;
-    var raw = dollars / buyinValue;
-    return clampBuyins(Math.round(raw * 1e6) / 1e6);
+    return roundToCents(dollars / buyinValue);
+  }
+
+  function buyinUnitsToDollars(units, buyinValue) {
+    return roundToCents(units * buyinValue);
   }
 
   function sanitizePlayer(p) {
@@ -174,7 +177,8 @@
     createPlayer: createPlayer,
     sanitizePlayer: sanitizePlayer,
     clampBuyins: clampBuyins,
-    dollarsToBuyins: dollarsToBuyins,
+    dollarsToBuyinUnits: dollarsToBuyinUnits,
+    buyinUnitsToDollars: buyinUnitsToDollars,
     normalizeLoadedState: normalizeLoadedState,
     serializeState: serializeState,
     fmtMoney: fmtMoney,

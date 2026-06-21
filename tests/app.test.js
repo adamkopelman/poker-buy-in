@@ -83,25 +83,25 @@ test('clampBuyins', async (t) => {
   });
 });
 
-test('dollarsToBuyins', async (t) => {
+test('dollarsToBuyinUnits / buyinUnitsToDollars', async (t) => {
   await t.test('converts an exact multiple of the buy-in value', () => {
-    assert.equal(PokerApp.dollarsToBuyins(60, 20), 3);
+    assert.equal(PokerApp.dollarsToBuyinUnits(100, 50), 2);
   });
 
-  await t.test('floors a partial buy-in down', () => {
-    assert.equal(PokerApp.dollarsToBuyins(50, 20), 2);
+  await t.test('allows a fractional number of buy-in units', () => {
+    assert.equal(PokerApp.dollarsToBuyinUnits(75, 50), 1.5);
   });
 
   await t.test('returns 0 when buyinValue is 0', () => {
-    assert.equal(PokerApp.dollarsToBuyins(50, 0), 0);
+    assert.equal(PokerApp.dollarsToBuyinUnits(50, 0), 0);
   });
 
-  await t.test('clamps a negative amount to 0', () => {
-    assert.equal(PokerApp.dollarsToBuyins(-20, 20), 0);
+  await t.test('converts buy-in units back to dollars', () => {
+    assert.equal(PokerApp.buyinUnitsToDollars(2, 50), 100);
   });
 
-  await t.test('ignores tiny floating point drift', () => {
-    assert.equal(PokerApp.dollarsToBuyins(0.3, 0.1), 3);
+  await t.test('round-trips cleanly', () => {
+    assert.equal(PokerApp.buyinUnitsToDollars(PokerApp.dollarsToBuyinUnits(400, 50), 50), 400);
   });
 });
 
