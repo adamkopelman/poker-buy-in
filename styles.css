@@ -292,6 +292,8 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
   font-size: 0.9rem;
 }
 .settlement-row:last-child { border-bottom: none; }
+.settlement-debtor { color: var(--danger); font-weight: 600; }
+.settlement-creditor { color: var(--accent); font-weight: 600; }
 .settlement-amount { font-weight: 700; color: var(--accent); }
 .settlement-empty {
   color: var(--muted);
